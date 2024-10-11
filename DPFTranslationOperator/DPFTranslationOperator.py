@@ -8,21 +8,21 @@ from ansys.dpf.core.operator_specification import CustomSpecification, Specifica
 # Function to capture operator IO (inputs/outputs) with names as keys
 def get_operator_io(operator):
     operator_info = {"inputs": {}, "outputs": {}}
-    
+
     # Capture inputs
     if operator.inputs:
-        for pin_num in range(len(operator.inputs)):
-            input_pin = operator.inputs.get_input(pin_num)
-            if input_pin:
-                operator_info["inputs"][input_pin.name] = {"pin_number": pin_num, "type": type(input_pin).__name__}
+        for pin_name, input_pin in operator.inputs.__dict__.items():
+            if isinstance(input_pin, dpf.inputs.Input):
+                # Store the pin's name, index, and type
+                operator_info["inputs"][pin_name] = {"pin_number": input_pin._pin, "type": type(input_pin).__name__}
 
     # Capture outputs
     if operator.outputs:
-        for pin_num in range(len(operator.outputs)):
-            output_pin = operator.outputs.get_output(pin_num)
-            if output_pin:
-                operator_info["outputs"][output_pin.name] = {"pin_number": pin_num, "type": type(output_pin).__name__}
-                
+        for pin_name, output_pin in operator.outputs.__dict__.items():
+            if isinstance(output_pin, dpf.outputs.Output):
+                # Store the pin's name, index, and type
+                operator_info["outputs"][pin_name] = {"pin_number": output_pin._pin, "type": type(output_pin).__name__}
+
     return operator_info
 
 
