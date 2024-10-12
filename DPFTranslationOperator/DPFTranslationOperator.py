@@ -206,16 +206,22 @@ def pydpf_to_cpp(script_content):
 
     return cpp_code
 
+
+
 def parse_dpf_cpp_script(script_content):
-    # Structure to store operator name and parameters
+    """
+    Parses the provided C++ script and looks for ansys::dpf::Operator declarations.
+    
+    Returns a list of operators (name and parameters).
+    """
     operators = []
-    
+
     # Regex pattern to find ansys::dpf::Operator declarations
-    # We Look for: ansys::dpf::Operator <name>(<params>);
     pattern = r'ansys::dpf::Operator\s+(\w+)\s*\((.*?)\)\s*;'
-    
+
+    # Search for operators in the entire script (since we assume no main function)
     matches = re.findall(pattern, script_content)
-    
+
     # Store the results in a list of dictionaries
     for match in matches:
         operator_name = match[0]  # The operator variable name
@@ -225,38 +231,47 @@ def parse_dpf_cpp_script(script_content):
     return operators
 
 def generate_workflow_code(operators):
-    # Generate C++ workflow object based on the operators
+    """
+    Generates the C++ workflow object based on the detected operators.
+    
+    Returns the workflow code as a string.
+    """
     workflow_code = "\n\n// Add operators to the workflow\n"
     workflow_code += "ansys::dpf::Workflow workflow;\n"
     
     for op in operators:
         workflow_code += f'workflow.addOperator("{op["name"]}", {op["name"]});\n'
     
-    workflow_code += 'std::string workflow_id = workflow.record();\n'
-    workflow_code += '#include <fstream>\nstd::ofstream outfile("workflow_id.txt", std::ofstream::trunc);\n'
+    workflow_code += '\n\nstd::string workflow_id = workflow.record();\n'
+    workflow_code += '\nstd::ofstream outfile("workflow_id.txt", std::ofstream::trunc);\n'
     workflow_code += 'if (outfile.is_open()) {\noutfile << workflow_id;\noutfile.close();\n} else {\nstd::cerr << "Error: Unable to open file to write workflow_id" << std::endl;\nreturn 1;\n}'
     
     return workflow_code
 
-
 def append_workflow_to_script(script_content, workflow_code):
-    # Append the workflow code at the end of the script content
-    return script_content + "\n" + workflow_code
-
+    """
+    Appends the workflow code to the end of the script content and creates a new main() function.
+    """
+    # Add the workflow code and create a new main() function at the end of the script
+    new_script = script_content + "\n\n" + "#include <fstream>\n" + "int main() {\n" + workflow_code + "\nreturn 0;\n}\n"
+    
+    return new_script
 
 def execute_cpp_script(output_file_path="CPP_DPF_Script_with_workflow.cpp"):
-    #TODO: I need to imlement a method to execute a cpp process
-    raise NotImplementedError("The function to execute a cpp script is not implemented yet!")
-
+    # TODO: Implement a method to execute a C++ process
+    raise NotImplementedError("The function to execute a C++ script is not implemented yet!")
 
 def process_dpf_cpp_script(script_content, output_file_path="CPP_DPF_Script_with_workflow.cpp"):
+    """
+    Main function to process the C++ script, append the workflow code, and save the result.
+    """
     # Step 1: Parse the script to find ansys::dpf::Operator declarations
     operators = parse_dpf_cpp_script(script_content)
 
     # Step 2: Generate the C++ workflow object with the detected operators
     workflow_code = generate_workflow_code(operators)
 
-    # Step 3: Append the workflow code to the end of the script content
+    # Step 3: Append the workflow code to the script content, and create a new main() function
     appended_script = append_workflow_to_script(script_content, workflow_code)
 
     # Step 4: Save the appended script to a file to execute it
