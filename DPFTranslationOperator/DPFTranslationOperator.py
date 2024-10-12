@@ -1,5 +1,7 @@
 import os
 import re
+import tempfile
+import subprocess
 from ansys.dpf import core as dpf
 from ansys.dpf.core.custom_operator import CustomOperatorBase, record_operator
 from ansys.dpf.core.operator_specification import CustomSpecification, SpecificationProperties, PinSpecification
@@ -79,7 +81,7 @@ def generate_pydpf_script(workflow):
         workflow=workflow
     )
     
-    # PyDPF script as a string
+    # Get the PyDPF script as a string
     result_pydpf_code = op.outputs.pydpf_code()
     
     return result_pydpf_code
@@ -257,13 +259,38 @@ def append_workflow_to_script(script_content, workflow_code):
     
     return new_script
 
+
 def execute_cpp_script(output_file_path="CPP_DPF_Script_with_workflow.cpp"):
-    # TODO: Implement a method to execute a C++ process
-    raise NotImplementedError("The function to execute a C++ script is not implemented yet!")
+    """
+    Compiles and executes the provided C++ script.
+    
+    Parameters:
+    - output_file_path (str): The path to the C++ script to compile and execute.
+    """
+    # Step 1: A temporary directory to store the compiled executable
+    with tempfile.TemporaryDirectory() as temp_dir:
+        executable_path = os.path.join(temp_dir, "compiled_executable")
+        
+        # Step 2: Compile the C++ script using g++
+        compile_command = ["g++", output_file_path, "-o", executable_path]
+        compile_result = subprocess.run(compile_command, capture_output=True, text=True)
+        
+        # Check if the compilation was successful
+        if compile_result.returncode != 0:
+            print(f"Compilation failed: {compile_result.stderr}")
+            return
+        
+        # Step 3: Execute the compiled executable
+        execute_result = subprocess.run([executable_path])
+        
+        # Check if the execution was successful
+        if execute_result.returncode != 0:
+            print(f"Execution failed with return code {execute_result.returncode}")
+
 
 def process_dpf_cpp_script(script_content, output_file_path="CPP_DPF_Script_with_workflow.cpp"):
     """
-    Main function to process the C++ script, append the workflow code, and save the result.
+    Main function to process the C++ script, append the workflow code, and save the result in a seperate file.
     """
     # Step 1: Parse the script to find ansys::dpf::Operator declarations
     operators = parse_dpf_cpp_script(script_content)
@@ -271,7 +298,7 @@ def process_dpf_cpp_script(script_content, output_file_path="CPP_DPF_Script_with
     # Step 2: Generate the C++ workflow object with the detected operators
     workflow_code = generate_workflow_code(operators)
 
-    # Step 3: Append the workflow code to the script content, and create a new main() function
+    # Step 3: Append the workflow code to the script content, and create a main() function
     appended_script = append_workflow_to_script(script_content, workflow_code)
 
     # Step 4: Save the appended script to a file to execute it
@@ -303,7 +330,7 @@ def get_pydpf_code_from_recorded_workflow():
         workflow=workflow
     )
     
-    # Step 4: Retrieve the PyDPF script as a string
+    # Step 4: Get the PyDPF script as a string
     result_pydpf_code = op.outputs.pydpf_code()
     
     # Step 5: Return the PyDPF script
