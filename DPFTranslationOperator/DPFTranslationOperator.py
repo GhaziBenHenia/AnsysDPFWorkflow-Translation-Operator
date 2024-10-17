@@ -218,16 +218,28 @@ def parse_dpf_cpp_script(script_content):
     """
     operators = []
 
-    # Regex pattern to find ansys::dpf::Operator declarations
-    pattern = r'ansys::dpf::Operator\s+(\w+)\s*\((.*?)\)\s*;'
+    # Pattern 1: ansys::dpf::Operator operator_name(operator_params);
+    pattern_1 = r'ansys::dpf::Operator\s+(\w+)\s*\((.*?)\)\s*;'
+    
+    # Pattern 2: ansys::dpf::Operator operator_name = ansys::dpf::Operator("operator_params");
+    pattern_2 = r'ansys::dpf::Operator\s+(\w+)\s*=\s*ansys::dpf::Operator\((.*?)\)\s*;'
 
-    # Search for operators in the entire script (since we assume no main function)
-    matches = re.findall(pattern, script_content)
+    # Search for operators with pattern 1
+    matches_1 = re.findall(pattern_1, script_content)
 
-    # Store the results in a list of dictionaries
-    for match in matches:
+    # Search for operators with pattern 2
+    matches_2 = re.findall(pattern_2, script_content)
+
+    # Process matches from pattern 1
+    for match in matches_1:
         operator_name = match[0]  # The operator variable name
         operator_params = match[1]  # The string inside the parentheses (The operator name in DPF-core)
+        operators.append({"name": operator_name, "params": operator_params})
+
+    # Process matches from pattern 2
+    for match in matches_2:
+        operator_name = match[0]  # The operator variable name
+        operator_params = match[1].strip('"')  # The string inside the parentheses (The operator name in DPF-core)
         operators.append({"name": operator_name, "params": operator_params})
     
     return operators
